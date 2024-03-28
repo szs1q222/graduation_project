@@ -1,0 +1,6 @@
+*.jpg
+*.txt
+*.pth
+*.log
+__pycache__
+.idea
