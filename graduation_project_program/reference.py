@@ -110,21 +110,38 @@
 
 
 import torch
+from torch import nn
 
-T1 = torch.tensor([1, 2, 5, 4])
-T2 = torch.tensor([1, 2, 3, 4])
-T3 = torch.tensor([2, 2, 3, 4])
-a, b = [], []
-a.append(T1.unsqueeze_(0))
-a.append(T2.unsqueeze_(0))
-a.append(T3.unsqueeze_(0))
-b.append(T1)
-b.append(T2)
-b.append(T3)
-print(a)
-print(b)
+# T1 = torch.tensor([1, 2, 5, 4])
+# T2 = torch.tensor([1, 2, 3, 4])
+# T3 = torch.tensor([2, 2, 3, 4])
+# a, b = [], []
+# a.append(T1.unsqueeze_(0))
+# a.append(T2.unsqueeze_(0))
+# a.append(T3.unsqueeze_(0))
+# b.append(T1)
+# b.append(T2)
+# b.append(T3)
+# print(a)
+# print(b)
+#
+# c = torch.cat(a, dim=0)
+# print(c)
+# d = torch.cat(b, dim=0)
+# print(d)
 
-c = torch.cat(a, dim=0)
-print(c)
-d = torch.cat(b, dim=0)
-print(d)
+# targets = torch.tensor([[1, ], [0, ], [2, ]])
+# print(targets)
+# targets = targets.flatten()
+# print(targets)
+
+loss = nn.CrossEntropyLoss()
+input = torch.randn(3, 5, requires_grad=True)
+print(input)
+print(input.shape)
+target = torch.empty(3, dtype=torch.long).random_(5)
+print(target)
+print(target.shape)
+output = loss(input, target)
+print(output)
+print(output.shape)

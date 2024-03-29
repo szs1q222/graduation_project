@@ -50,8 +50,8 @@ net = net.to(device=device)
 
 # 迭代器和损失函数优化器实例化
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
-# loss = nn.CrossEntropyLoss()
+# loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
+loss = nn.CrossEntropyLoss()
 
 
 # 创建图片数据迭代器
@@ -60,12 +60,13 @@ def colle(batch):
     imgs, targets = list(zip(*batch))
     # 图片合并标签不合并可以加速训练（此处都合并了）
     imgs = torch.cat(imgs, dim=0)  # cat(inputs, dim=?)在给定维度上对输入的张量序列seq 进行连接操作。
-    targets = torch.cat(targets, dim=0)  # tensor([1,]),tensor([0,])……（shape为[1,]）合并为tensor([1,0])
+    targets = torch.cat(targets, dim=0)  # tensor([1,]),tensor([0,])……（shape为[1,]）合并为tensor([[1],[0]])
+    targets = targets.flatten()  # tensor([[1],[0]])二维转化为一维
     return imgs, targets
 
 
 # 若实现了__len__和__getitem__，DataLoader会自动实现数据集的分批，shuffle打乱顺序，drop_last删除最后不完整的批次，collate_fn如何取样本
-dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
+# dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
 
 # 创建logger
@@ -110,7 +111,6 @@ def train():
         logger.info(f"Train_epoch:{epoch + 1}/{epochs}")
 
         net.train()
-        Loss = 0
         total_loss = 0
         batch_count = 0  # 对batch计数
         batch_counts = ceil(len(dataset) * args.train_rate / args.batch_size)
@@ -120,12 +120,12 @@ def train():
             # 训练主体
             # alexnet, vgg, resnet
             pred = net(imgs)  # imgs大小(batch_size,3,224,224)
+            targets = targets.long()  # cross_entropy损失函数要求目标targets是长整型（torch.long或torch.int64）（都使用.long()）
             Loss = loss(pred, targets)
             total_loss += Loss
             optimizer.zero_grad()  # 优化器梯度归零
             Loss.backward()  # 反向传播计算梯度
             optimizer.step()  # 更新参数
-
             # # GoogLeNet
             # pred, aux2, aux1 = net(imgs)
             # main_loss = loss(pred, targets)
