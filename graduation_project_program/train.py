@@ -1,3 +1,4 @@
+import os
 from math import ceil
 
 import torch
@@ -5,6 +6,7 @@ from torch import nn
 from torch.utils.data import DataLoader, random_split
 import torchvision
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import matplotlib.pyplot as plt
 
 from utils.myloss import MyLoss
 from dataset.read_yolo_dataset import ReadYOLO
@@ -22,6 +24,7 @@ parser.add_argument('--model', default="alexnet", help='model')  # 选择模型
 parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
 parser.add_argument('--weights_address', default="./weights", help='weights_address')  # 模型参数存储地址
 parser.add_argument('--log_address', default="./log", help='log_address')  # 日志存储地址
+parser.add_argument('--visualization_address', default="./visualization", help='visualization_address')  # 可视化地址
 # 训练模型相关参数设置
 parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
 parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
@@ -31,6 +34,14 @@ parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
 parser.add_argument('--epochs', default=20, type=int, help='epochs')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')  # SGD的权重衰减
 args = parser.parse_args()
+
+# 如果存储文件夹不存在，则创建
+if not os.path.exists(args.weights_address):
+    os.makedirs(args.weights_address)
+if not os.path.exists(args.log_address):
+    os.makedirs(args.log_address)
+if not os.path.exists(args.visualization_address):
+    os.makedirs(args.visualization_address)
 
 # 创建全局device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,6 +79,16 @@ def colle(batch):
 # 若实现了__len__和__getitem__，DataLoader会自动实现数据集的分批，shuffle打乱顺序，drop_last删除最后不完整的批次，collate_fn如何取样本
 # dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
+# 创建可视化
+def create_visualization(x_axis, y_axis: dict):
+    plt.figure(figsize=(12, 6))
+    for value, name in enumerate(y_axis):
+        plt.plot(value, label=name)
+    plt.xlabel(x_axis)
+    plt.legend(labels=f"{args.model}_training_result")
+    plt.savefig(f"{args.visualization_address}/{args.model}_training_result.png")
+    plt.show()
+
 
 # 创建logger
 def creat_logger():
@@ -97,6 +118,13 @@ def train():
     global net
     epochs = args.epochs  # 设置epoch
 
+    # 可视化参数
+    total_train_losses = []  # 每个epoch的训练损失值列表
+    accuracies = []  # 每个epoch的准确率列表
+    precisions = []  # 每个epoch的精确率列表
+    recalls = []  # 每个epoch的召回率列表
+    f1_scores = []  # 每个epoch的F1值列表
+
     for epoch in range(epochs):
         start_epoch = time.time()  # epoch开始计时
         # 切分训练集和测试集
@@ -111,7 +139,7 @@ def train():
         logger.info(f"Train_epoch:{epoch + 1}/{epochs}")
 
         net.train()
-        total_loss = 0
+        total_train_loss = 0
         batch_count = 0  # 对batch计数
         batch_counts = ceil(len(dataset) * args.train_rate / args.batch_size)
         for batch, (imgs, targets) in enumerate(trainLoader):
@@ -122,7 +150,7 @@ def train():
             pred = net(imgs)  # imgs大小(batch_size,3,224,224)
             targets = targets.long()  # cross_entropy损失函数要求目标targets是长整型（torch.long或torch.int64）（都使用.long()）
             Loss = loss(pred, targets)
-            total_loss += Loss
+            total_train_loss += Loss
             optimizer.zero_grad()  # 优化器梯度归零
             Loss.backward()  # 反向传播计算梯度
             optimizer.step()  # 更新参数
@@ -153,9 +181,9 @@ def train():
                         f"loss:{float(Loss):.4f}, "
                         f"batch_time:{batch_time:.4f}")
 
-        txt_log_file.write(f'Epoch {epoch + 1}/{epochs}, total_loss: {float(total_loss):.4f}\n')
+        txt_log_file.write(f'Epoch {epoch + 1}/{epochs}, total_loss: {float(total_train_loss):.4f}\n')
         txt_log_file.flush()
-        logger.info(f'Epoch {epoch + 1}/{epochs}, Loss: {float(total_loss):.4f}')
+        logger.info(f'Epoch {epoch + 1}/{epochs}, Loss: {float(total_train_loss):.4f}')
 
         torch.save(net.state_dict(),
                    f"{args.weights_address}/{args.model}_epoch{epoch + 1}_params.pth")  # 每个epoch保存一次参数
@@ -207,6 +235,19 @@ def train():
         txt_log_file.flush()
         logger.info(f"epoch:{epoch + 1}/{epochs}, "
                     f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}")
+
+        total_train_losses.append(total_train_loss)
+        accuracies.append(accuracy)
+        precisions.append(precision)
+        recalls.append(recall)
+        f1_scores.append(f1)
+
+    y_axit = {"total_train_losses": total_train_losses,
+              "accuracies": accuracies,
+              "precisions": precisions,
+              "recalls": recalls,
+              "f1_scores": f1_scores}
+    create_visualization(x_axis='Epoch', y_axis=y_axit)
 
     print("训练结束")
     txt_log_file.close()

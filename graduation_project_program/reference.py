@@ -107,7 +107,7 @@
 #
 # # 注意：上面的代码示例仅用于说明目的，并没有实现完整的训练和测试流程。
 # # 在实际应用中，您需要根据您的数据集和模型架构来定制这些流程。
-
+import os
 
 import torch
 from torch import nn
@@ -135,13 +135,28 @@ from torch import nn
 # targets = targets.flatten()
 # print(targets)
 
-loss = nn.CrossEntropyLoss()
-input = torch.randn(3, 5, requires_grad=True)
-print(input)
-print(input.shape)
-target = torch.empty(3, dtype=torch.long).random_(5)
-print(target)
-print(target.shape)
-output = loss(input, target)
-print(output)
-print(output.shape)
+# loss = nn.CrossEntropyLoss()
+# input = torch.randn(3, 5, requires_grad=True)
+# print(input)
+# print(input.shape)
+# target = torch.empty(3, dtype=torch.long).random_(5)
+# print(target)
+# print(target.shape)
+# output = loss(input, target)
+# print(output)
+# print(output.shape)
+
+# y_axit = {"total_train_losses": 1,
+#           "total_loss_losses": 2,
+#           "accuracies": 3,
+#           "precisions": 4,
+#           "recalls": 5,
+#           "f1_scores": 6}
+# for i, j in enumerate(y_axit):
+#     print(i)
+
+# folder_path = os.path.join(os.getcwd(), )
+# print(folder_path)
+# print(os.path.exists("./visualization"))
+# # os.makedirs("./visualization")
+
