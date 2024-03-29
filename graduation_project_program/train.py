@@ -1,6 +1,7 @@
 from math import ceil
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader, random_split
 import torchvision
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -10,23 +11,25 @@ from dataset.read_yolo_dataset import ReadYOLO
 from Augmentation.data_augment import DataAugment
 
 import logging
-import argparse  # 可以直接在命令行中向程序传入参数并让程序运行
+import argparse
 import time
 
-# 在命令行运行时可以加以下参数进行修改
+# 命令行执行传参
 parser = argparse.ArgumentParser(description='Training')
-parser.add_argument('--model', default="convnext_tiny", help='model')  # 选择模型
+parser.add_argument('--model', default="alexnet", help='model')  # 选择模型
+# (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
 # 所有地址相关变量放在一个文件中，方便上云管理
 parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
+parser.add_argument('--weights_address', default="./weights", help='weights_address')  # 模型参数存储地址
+parser.add_argument('--log_address', default="./log", help='log_address')  # 日志存储地址
+# 训练模型相关参数设置
+parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
 parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
-
 parser.add_argument('--lr', default=0.001, type=float, help='learning rate of model')  # 学习率
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')  # 动量
-# （若上次的momentum(v)与此次的负梯度方向相同，则下降幅度加大，加速收敛）  v = momentum * v - learning_rate * d(weight); weight = weight + v
 parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
 parser.add_argument('--epochs', default=20, type=int, help='epochs')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')  # SGD的权重衰减
-
 args = parser.parse_args()
 
 # 创建全局device
@@ -38,18 +41,17 @@ data_augment = DataAugment(size=size)  # 数据增强实例化
 dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=data_augment, device=device)  # 读取数据集实例化
 picture_num = len(dataset)  # 获取图片总数
 
-kwargs = {"num_classes": 2}
-
 # 模型实例化
+kwargs = {"num_classes": args.num_classes}
 net = torchvision.models.vgg16()
-# alexnet vgg11/13/16/19(_bn) googlenet resnet18/34/50/101/152 densenet121/161/169/201 convnext_tiny/small/base/large
-model_str = f"net = torchvision.models.{args.model}(**{kwargs})"
-exec(model_str)
+creat_model = f"net = torchvision.models.{args.model}(**{kwargs})"
+exec(creat_model)
 net = net.to(device=device)
 
 # 迭代器和损失函数优化器实例化
 optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()，loss(网络获取的图片)
+loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
+# loss = nn.CrossEntropyLoss()
 
 
 # 创建图片数据迭代器
@@ -66,8 +68,30 @@ def colle(batch):
 dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
 
+# 创建logger
+def creat_logger():
+    logger = logging.getLogger(f"{args.model}_training")
+    logger.setLevel(logging.INFO)
+    # 创建一个handler，用于写入日志文件
+    log_file = f"{args.log_address}/{args.model}_training.log"
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(logging.INFO)
+    # 再创建一个handler，用于输出到控制台
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    # 定义handler的输出格式
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # 给logger添加handler
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    return logger
+
+
 def train():
-    log_file = open(f'./log/{args.model}_training_log.txt', 'w')
+    txt_log_file = open(f'{args.log_address}/{args.model}_training_log.txt', 'w')
+    logger = creat_logger()
 
     global net
     epochs = args.epochs  # 设置epoch
@@ -81,9 +105,9 @@ def train():
         testLoader = DataLoader(testset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
         # 开启训练模式（BatchNorm和DropOut被使用，net.eval()推理模式会屏蔽这些模块）
-        log_file.write(f"Train_epoch:{epoch + 1}/{epochs}\n")
-        log_file.flush()
-        print(f"Train_epoch:{epoch + 1}/{epochs}\n")
+        txt_log_file.write(f"Train_epoch:{epoch + 1}/{epochs}\n")
+        txt_log_file.flush()
+        logger.info(f"Train_epoch:{epoch + 1}/{epochs}")
 
         net.train()
         Loss = 0
@@ -121,23 +145,24 @@ def train():
 
             # 打印参数
             batch_time = time.time() - start_batch  # 训练一个epoch的时间
-            log_file.write(f"batch:{batch_count}/{batch_counts}, "
-                           f"loss:{float(Loss):.4f}, "
-                           f"batch_time:{batch_time:.4f}\n")
-            log_file.flush()
-            print(f"batch:{batch_count}/{batch_counts}, "
-                  f"loss:{float(Loss):.4f}, "
-                  f"batch_time:{batch_time:.4f}\n")
+            txt_log_file.write(f"batch:{batch_count}/{batch_counts}, "
+                               f"loss:{float(Loss):.4f}, "
+                               f"batch_time:{batch_time:.4f}\n")
+            txt_log_file.flush()
+            logger.info(f"batch:{batch_count}/{batch_counts}, "
+                        f"loss:{float(Loss):.4f}, "
+                        f"batch_time:{batch_time:.4f}")
 
-        log_file.write(f'Epoch {epoch + 1}/{epochs}, total_loss: {float(total_loss):.4f}\n')
-        log_file.flush()
-        print(f'Epoch {epoch + 1}/{epochs}, Loss: {float(total_loss):.4f}\n')
+        txt_log_file.write(f'Epoch {epoch + 1}/{epochs}, total_loss: {float(total_loss):.4f}\n')
+        txt_log_file.flush()
+        logger.info(f'Epoch {epoch + 1}/{epochs}, Loss: {float(total_loss):.4f}')
 
-        torch.save(net.state_dict(), f"./weights/{args.model}_epoch{epoch + 1}_params.pth")  # 每个epoch保存一次参数
+        torch.save(net.state_dict(),
+                   f"{args.weights_address}/{args.model}_epoch{epoch + 1}_params.pth")  # 每个epoch保存一次参数
 
-        log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
-        log_file.flush()
-        print(f"Test_epoch:{epoch + 1}/{epochs}\n")
+        txt_log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
+        txt_log_file.flush()
+        logger.info(f"Test_epoch:{epoch + 1}/{epochs}")
 
         net.eval()
         preds = []  # 从模型获得预测结果
@@ -160,32 +185,31 @@ def train():
         f1 = f1_score(true_labels, preds.argmax(dim=1), average='macro')
 
         test_time = time.time() - test_start_time
-        log_file.write(f'Test Accuracy: {accuracy:.4f}, '
-                       f'Test Precision: {precision:.4f}, '
-                       f'Test Recall: {recall:.4f}, '
-                       f'Test F1: {f1:.4f} '
-                       f'Test time: {test_time}\n')
-        log_file.flush()  # 确保内容被写入文件
-        print(f'Test Accuracy: {accuracy:.4f}, '
-              f'Test Precision: {precision:.4f}, '
-              f'Test Recall: {recall:.4f}, '
-              f'Test F1: {f1:.4f} '
-              f'Test time: {test_time}\n')
+        txt_log_file.write(f'Test Accuracy: {accuracy:.4f}, '
+                           f'Test Precision: {precision:.4f}, '
+                           f'Test Recall: {recall:.4f}, '
+                           f'Test F1: {f1:.4f} '
+                           f'Test time: {test_time}\n')
+        txt_log_file.flush()  # 确保内容被写入文件
+        logger.info(f'Test Accuracy: {accuracy:.4f}, '
+                    f'Test Precision: {precision:.4f}, '
+                    f'Test Recall: {recall:.4f}, '
+                    f'Test F1: {f1:.4f} '
+                    f'Test time: {test_time}')
 
         # 打印参数
         total_epoch_time = time.time() - start_epoch  # 训练一个epoch的时间
         epoch_hour = int(total_epoch_time / 60 // 60)
         epoch_minute = int(total_epoch_time // 60 - epoch_hour * 60)
         epoch_second = int(total_epoch_time - epoch_hour * 60 * 60 - epoch_minute * 60)
-        log_file.write(f"epoch:{epoch + 1}/{epochs}, "
-                       f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}\n")
-        log_file.flush()
-        print(f"epoch:{epoch + 1}/{epochs}, "
-              f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}\n")
+        txt_log_file.write(f"epoch:{epoch + 1}/{epochs}, "
+                           f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}\n")
+        txt_log_file.flush()
+        logger.info(f"epoch:{epoch + 1}/{epochs}, "
+                    f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}")
 
     print("训练结束")
-
-    log_file.close()
+    txt_log_file.close()
 
 
 if __name__ == '__main__':
