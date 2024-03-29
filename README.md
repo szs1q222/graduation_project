@@ -41,7 +41,7 @@ graduation_project:.
 ├─.gitignore
 ├─README.md
 └─graduation_project_program 	// 主程序 Main program
-	├─Augmentation 				// 自定义图像增强 Custom image enhancement
+    ├─Augmentation 				// 自定义图像增强 Custom image enhancement
     │  └─data_augment.py
     ├─dataset
     │  ├─test
