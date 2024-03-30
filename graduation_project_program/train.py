@@ -1,5 +1,6 @@
 import os
 from math import ceil
+from typing import Optional
 
 import torch
 from torch import nn
@@ -80,13 +81,16 @@ def colle(batch):
 # dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
 # 创建可视化
-def create_visualization(x_axis, y_axis: dict):
+def create_visualization(x_axis, y_axis: dict, type: Optional[str] = ['train', 'test']):
     plt.figure(figsize=(12, 6))
-    for value, name in enumerate(y_axis):
-        plt.plot(value, label=name)
-    plt.xlabel(x_axis)
-    plt.legend(labels=f"{args.model}_training_result")
-    plt.savefig(f"{args.visualization_address}/{args.model}_training_result.png")
+    lines = []  # 空列表保存线对象
+    labels = list(y_axis.keys())
+    for name in y_axis:
+        line, = plt.plot(list(range(20)), y_axis[name])  # 注意逗号，返回单个线对象
+        lines.append(line)
+    plt.xlabel("Epochs")
+    plt.legend(handles=lines, labels=labels, loc='best')
+    plt.savefig(f"{args.visualization_address}/{args.model}_{type}_result.png")
     plt.show()
 
 
@@ -181,12 +185,12 @@ def train():
                         f"loss:{float(Loss):.4f}, "
                         f"batch_time:{batch_time:.4f}")
 
-        txt_log_file.write(f'Epoch {epoch + 1}/{epochs}, total_loss: {float(total_train_loss):.4f}\n')
+        txt_log_file.write(f'Epoch:{epoch + 1}/{epochs}, total_loss:{float(total_train_loss):.4f}\n')
         txt_log_file.flush()
-        logger.info(f'Epoch {epoch + 1}/{epochs}, Loss: {float(total_train_loss):.4f}')
+        logger.info(f'Epoch:{epoch + 1}/{epochs}, total_loss:{float(total_train_loss):.4f}')
 
-        torch.save(net.state_dict(),
-                   f"{args.weights_address}/{args.model}_epoch{epoch + 1}_params.pth")  # 每个epoch保存一次参数
+        # 每个epoch保存一次参数
+        torch.save(net.state_dict(), f"{args.weights_address}/{args.model}_epoch{epoch + 1}_params.pth")
 
         txt_log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
         txt_log_file.flush()
@@ -216,13 +220,13 @@ def train():
         txt_log_file.write(f'Test Accuracy: {accuracy:.4f}, '
                            f'Test Precision: {precision:.4f}, '
                            f'Test Recall: {recall:.4f}, '
-                           f'Test F1: {f1:.4f} '
+                           f'Test F1: {f1:.4f}, '
                            f'Test time: {test_time}\n')
         txt_log_file.flush()  # 确保内容被写入文件
         logger.info(f'Test Accuracy: {accuracy:.4f}, '
                     f'Test Precision: {precision:.4f}, '
                     f'Test Recall: {recall:.4f}, '
-                    f'Test F1: {f1:.4f} '
+                    f'Test F1: {f1:.4f}, '
                     f'Test time: {test_time}')
 
         # 打印参数
@@ -242,12 +246,13 @@ def train():
         recalls.append(recall)
         f1_scores.append(f1)
 
-    y_axit = {"total_train_losses": total_train_losses,
-              "accuracies": accuracies,
-              "precisions": precisions,
-              "recalls": recalls,
-              "f1_scores": f1_scores}
-    create_visualization(x_axis='Epoch', y_axis=y_axit)
+    y_train_axit = {"total_train_losses": total_train_losses, }
+    y_test_axit = {"accuracies": accuracies,
+                   "precisions": precisions,
+                   "recalls": recalls,
+                   "f1_scores": f1_scores}
+    create_visualization(x_axis=list(range(epochs)), y_axis=y_train_axit)
+    create_visualization(x_axis=list(range(epochs)), y_axis=y_test_axit)
 
     print("训练结束")
     txt_log_file.close()

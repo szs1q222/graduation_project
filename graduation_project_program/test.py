@@ -1,16 +1,15 @@
 import torchvision
 from PIL import Image
 from torch import nn
-from model_VGG16 import VGG16
 
 import cv2
 import torch
 import argparse
 
 parser = argparse.ArgumentParser(description='VGG16 Testing')
-parser.add_argument('--weight_dir', default='./weights/VGG16_epoch1_params.pth', help="参数路径")
-parser.add_argument('--test_dir', default='./dataset/test/img/Image_4.jpg', help="测试图片路径")
-
+parser.add_argument('--model', default="vgg16", help='model')  # 选择模型
+parser.add_argument('--weight_dir', default='./weights/vgg16/vgg16_epoch12_params.pth', help="参数路径")
+parser.add_argument('--test_dir', default='./dataset/test/img', help="测试图片路径")
 args = parser.parse_args()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # 创建全局device
