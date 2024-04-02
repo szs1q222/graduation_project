@@ -6,7 +6,7 @@ from matplotlib.ticker import MultipleLocator
 
 # 训练过程绘图出现错误，根据日志文件进行绘图
 parser = argparse.ArgumentParser(description='LogToVisualization')
-parser.add_argument('--model', default="convnext_tiny", help='model')  # 选择模型
+parser.add_argument('--model', default="vgg11", help='model')  # 选择模型
 parser.add_argument('--log_address', default="./log", help='log_address')  # 日志地址
 parser.add_argument('--visualization_address', default="./visualization", help='visualization_address')  # 可视化存储地址
 # 训练模型相关参数设置
@@ -28,12 +28,14 @@ with open(f"{args.log_address}/{args.model}_training_log.txt", 'r') as file:
             epoch_str = line_list[1].split(':')
             if epoch_str[0] == " total_loss":
                 total_train_losses.append(float(epoch_str[1]))
-        if len(line_list) == 4:
+        if len(line_list) == 5:
+            # print(line_list)
             # Test Accuracy: 0.5914, Test Precision: 0.2957, Test Recall: 0.5000, Test F1: 0.3716 Test time: 112.91886448860168
+            # Test Accuracy: 0.9777, Test Precision: 0.9788, Test Recall: 0.9751, Test F1: 0.9768, Test time: 119.29520273208618
             accuracies.append(float(line_list[0].split(':')[1]))
             precisions.append(float(line_list[1].split(':')[1]))
             recalls.append(float(line_list[2].split(':')[1]))
-            f1_scores.append(float(line_list[3].split(' ')[3]))
+            f1_scores.append(float(line_list[3].split(':')[1]))
 
 y_axis = {
     # "total_train_losses": total_train_losses,
@@ -73,5 +75,9 @@ if __name__ == '__main__':
                    "precisions": precisions,
                    "recalls": recalls,
                    "f1_scores": f1_scores}
-    create_visualization(x_axis=list(range(1, epochs + 1)), y_axis=y_train_axit, type='train')
-    create_visualization(x_axis=list(range(1, epochs + 1)), y_axis=y_test_axit, type='test')
+
+    y_train_axit_len = len(y_train_axit["total_train_losses"])
+    y_test_axit_len = len(y_test_axit["accuracies"])
+
+    create_visualization(x_axis=list(range(1, y_train_axit_len + 1)), y_axis=y_train_axit, type='train')
+    create_visualization(x_axis=list(range(1, y_test_axit_len + 1)), y_axis=y_test_axit, type='test')

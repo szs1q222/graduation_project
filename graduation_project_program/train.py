@@ -21,7 +21,7 @@ import time
 
 # 命令行执行传参
 parser = argparse.ArgumentParser(description='Training')
-parser.add_argument('--model', default="convnext_tiny", help='model')  # 选择模型
+parser.add_argument('--model', default="vgg11", help='model')  # 选择模型
 # (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
 # 所有地址相关变量放在一个文件中，方便上云管理
 parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
@@ -88,7 +88,7 @@ def create_visualization(x_axis: list, y_axis: dict, type: Optional[str] = ['tra
     lines = []  # 空列表保存线对象
     labels = list(y_axis.keys())
     for name in y_axis:
-        line, = plt.plot(x_axis, y_axis[name])  # 注意逗号，返回单个线对象
+        line, = plt.plot(x_axis, y_axis[name].cpu().numpy())  # 逗号，返回单个线对象
         lines.append(line)
     plt.xlabel("Epochs")
     plt.legend(handles=lines, labels=labels, loc='best')
