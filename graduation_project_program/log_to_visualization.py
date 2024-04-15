@@ -6,7 +6,7 @@ from matplotlib.ticker import MultipleLocator
 
 # 训练过程绘图出现错误，根据日志文件进行绘图
 parser = argparse.ArgumentParser(description='LogToVisualization')
-parser.add_argument('--model', default="vgg11", help='model')  # 选择模型
+parser.add_argument('--model', default="resnet34", help='model')  # 选择模型
 parser.add_argument('--log_address', default="./log", help='log_address')  # 日志地址
 parser.add_argument('--visualization_address', default="./visualization", help='visualization_address')  # 可视化存储地址
 # 训练模型相关参数设置

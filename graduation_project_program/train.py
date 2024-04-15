@@ -21,7 +21,7 @@ import time
 
 # 命令行执行传参
 parser = argparse.ArgumentParser(description='Training')
-parser.add_argument('--model', default="vgg11", help='model')  # 选择模型
+parser.add_argument('--model', default="vgg13", help='model')  # 选择模型
 # (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
 # 所有地址相关变量放在一个文件中，方便上云管理
 parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
@@ -32,6 +32,7 @@ parser.add_argument('--visualization_address', default="./visualization", help='
 parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
 parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
 parser.add_argument('--lr', default=0.001, type=float, help='learning rate of model')  # 学习率
+parser.add_argument('--dropout', default=0.5, type=float, help='dropout of model')  # dropout
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')  # 动量
 parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
 parser.add_argument('--epochs', default=20, type=int, help='epochs')
@@ -56,7 +57,7 @@ dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=da
 picture_num = len(dataset)  # 获取图片总数
 
 # 模型实例化
-kwargs = {"num_classes": args.num_classes}
+kwargs = {"num_classes": args.num_classes, "dropout": args.dropout}
 net = torchvision.models.vgg16()
 creat_model = f"net = torchvision.models.{args.model}(**{kwargs})"
 exec(creat_model)
@@ -102,7 +103,7 @@ def create_visualization(x_axis: list, y_axis: dict, type: Optional[str] = ['tra
     plt.grid(ls='--')  # 生成网格
 
     plt.savefig(f"{args.visualization_address}/{args.model}_{type}_result.png")
-    plt.show()
+    # plt.show()
 
 
 # 创建logger
