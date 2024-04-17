@@ -63,15 +63,16 @@ def prepare_data(args):
 # 模型实例化
 def prepare_model(args, device):
     kwargs = {"num_classes": args.num_classes}  # 模型参数存储
-    if args.model.lower() not in ['resnet18', 'resnet34', 'resnet50']:
+    if args.model.lower() not in {'resnet18', 'resnet34', 'resnet50', 'densenet121', 'densenet201', 'densenet169',
+                                  'densenet161'}:
         kwargs["dropout"] = args.dropout
 
     # net = torchvision.models.vgg16()
-    # creat_model = f"net = torchvision.models.{args.model}(**{kwargs})"
+    # creat_model = f"net = torchvision.models.{args.model.lower()}(**{kwargs})"
     # exec(creat_model)
 
     # 动态导入模型
-    net = getattr(torchvision.models, args.model)(**kwargs)
+    net = getattr(torchvision.models, args.model.lower())(**kwargs)
     net = net.to(device=device)
 
     # 迭代器和损失函数优化器实例化
@@ -106,16 +107,16 @@ def create_visualization(args, x_axis: list, y_axis: dict, type: Optional[str] =
     # 设置坐标轴刻度
     plt.gca().xaxis.set_major_locator(MultipleLocator(1))  # 把x轴的刻度间隔设置为1
     plt.grid(ls='--')  # 生成网格
-    plt.savefig(f"{args.visualization_address}/{args.model}_{type}_result.png")
+    plt.savefig(f"{args.visualization_address}/{args.model.lower()}_{type}_result.png")
     # plt.show()
 
 
 # 创建logger
 def creat_logger(args):
-    logger = logging.getLogger(f"{args.model}_training")
+    logger = logging.getLogger(f"{args.model.lower()}_training")
     logger.setLevel(logging.INFO)
     # 创建一个handler，用于写入日志文件
-    log_file = f"{args.log_address}/{args.model}_training.log"
+    log_file = f"{args.log_address}/{args.model.lower()}_training.log"
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.INFO)
     # 再创建一个handler，用于输出到控制台
@@ -132,7 +133,7 @@ def creat_logger(args):
 
 
 def train(args):
-    txt_log_file = open(f'{args.log_address}/{args.model}_training_log.txt', 'w')
+    txt_log_file = open(f'{args.log_address}/{args.model.lower()}_training_log.txt', 'w')
     logger = creat_logger(args)
 
     prepare_folders(args)
@@ -210,7 +211,7 @@ def train(args):
         logger.info(f'Epoch:{epoch + 1}/{epochs}, total_loss:{float(total_train_loss):.4f}')
 
         # 每个epoch保存一次参数
-        torch.save(net.state_dict(), f"{args.weights_address}/{args.model}_epoch{epoch + 1}_params.pth")
+        torch.save(net.state_dict(), f"{args.weights_address}/{args.model.lower()}_epoch{epoch + 1}_params.pth")
 
         txt_log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
         txt_log_file.flush()
