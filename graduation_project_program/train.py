@@ -19,54 +19,66 @@ import logging
 import argparse
 import time
 
+
 # 命令行执行传参
-parser = argparse.ArgumentParser(description='Training')
-parser.add_argument('--model', default="vgg13", help='model')  # 选择模型
-# (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
-# 所有地址相关变量放在一个文件中，方便上云管理
-parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
-parser.add_argument('--weights_address', default="./weights", help='weights_address')  # 模型参数存储地址
-parser.add_argument('--log_address', default="./log", help='log_address')  # 日志存储地址
-parser.add_argument('--visualization_address', default="./visualization", help='visualization_address')  # 可视化地址
-# 训练模型相关参数设置
-parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
-parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
-parser.add_argument('--lr', default=0.001, type=float, help='learning rate of model')  # 学习率
-parser.add_argument('--dropout', default=0.5, type=float, help='dropout of model')  # dropout
-parser.add_argument('--momentum', default=0.9, type=float, help='momentum')  # 动量
-parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
-parser.add_argument('--epochs', default=20, type=int, help='epochs')
-parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')  # SGD的权重衰减
-args = parser.parse_args()
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Training')
+    parser.add_argument('--model', default="resnet50", help='model')  # 选择模型
+    # (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
+    # 所有地址相关变量放在一个文件中，方便上云管理
+    parser.add_argument('--dateset_address', default="./dataset", help='dateset_address')  # 数据集地址
+    parser.add_argument('--weights_address', default="./weights", help='weights_address')  # 模型参数存储地址
+    parser.add_argument('--log_address', default="./log", help='log_address')  # 日志存储地址
+    parser.add_argument('--visualization_address', default="./visualization", help='visualization_address')  # 可视化地址
+    # 训练模型相关参数设置
+    parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
+    parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
+    parser.add_argument('--lr', default=0.001, type=float, help='learning rate of model')  # 学习率
+    parser.add_argument('--dropout', default=0.5, type=float, help='dropout of model')  # dropout
+    parser.add_argument('--momentum', default=0.9, type=float, help='momentum')  # 动量
+    parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
+    parser.add_argument('--epochs', default=20, type=int, help='epochs')
+    parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')  # SGD的权重衰减
+    return parser.parse_args()
+
 
 # 如果存储文件夹不存在，则创建
-if not os.path.exists(args.weights_address):
-    os.makedirs(args.weights_address)
-if not os.path.exists(args.log_address):
-    os.makedirs(args.log_address)
-if not os.path.exists(args.visualization_address):
-    os.makedirs(args.visualization_address)
+def prepare_folders(args):
+    for folder in [args.weights_address, args.log_address, args.visualization_address]:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
 
-# 创建全局device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # 读取数据集
-size = (224, 224)
-data_augment = DataAugment(size=size)  # 数据增强实例化
-dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=data_augment, device=device)  # 读取数据集实例化
-picture_num = len(dataset)  # 获取图片总数
+def prepare_data(args):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    size = (224, 224)
+    data_augment = DataAugment(size=size)  # 数据增强实例化
+    dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=data_augment,
+                       device=device)  # 读取数据集实例化
+    # picture_num = len(dataset)  # 获取图片总数
+    return dataset, device
+
 
 # 模型实例化
-kwargs = {"num_classes": args.num_classes, "dropout": args.dropout}
-net = torchvision.models.vgg16()
-creat_model = f"net = torchvision.models.{args.model}(**{kwargs})"
-exec(creat_model)
-net = net.to(device=device)
+def prepare_model(args, device):
+    kwargs = {"num_classes": args.num_classes}  # 模型参数存储
+    if args.model.lower() not in ['resnet18', 'resnet34', 'resnet50']:
+        kwargs["dropout"] = args.dropout
 
-# 迭代器和损失函数优化器实例化
-optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-# loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
-loss = nn.CrossEntropyLoss()
+    # net = torchvision.models.vgg16()
+    # creat_model = f"net = torchvision.models.{args.model}(**{kwargs})"
+    # exec(creat_model)
+
+    # 动态导入模型
+    net = getattr(torchvision.models, args.model)(**kwargs)
+    net = net.to(device=device)
+
+    # 迭代器和损失函数优化器实例化
+    optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    # loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
+    loss = nn.CrossEntropyLoss()
+    return net, optimizer, loss
 
 
 # 创建图片数据迭代器
@@ -84,30 +96,22 @@ def colle(batch):
 # dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
 # 创建可视化
-def create_visualization(x_axis: list, y_axis: dict, type: Optional[str] = ['train', 'test']):
+def create_visualization(args, x_axis: list, y_axis: dict, type: Optional[str] = ['train', 'test']):
     plt.figure(figsize=(12, 6))
-    lines = []  # 空列表保存线对象
-    labels = list(y_axis.keys())
-    for name in y_axis:
-        line, = plt.plot(x_axis, y_axis[name].cpu().numpy())  # 逗号，返回单个线对象
-        lines.append(line)
+    for name, values in y_axis.items():
+        plt.plot(x_axis, values, label=name)
     plt.xlabel("Epochs")
-    plt.legend(handles=lines, labels=labels, loc='best')
+    plt.legend(loc='best')
 
     # 设置坐标轴刻度
-    x_major_locator = MultipleLocator(1)  # 把x轴的刻度间隔设置为1，并存在变量里
-    ax = plt.gca()  # ax为两条坐标轴的实例
-    ax.xaxis.set_major_locator(x_major_locator)  # 把x轴的主刻度设置为1的倍数
-    plt.xlim(x_axis[0] - 1, x_axis[-1] + 1)  # 把x轴的刻度范围设置(不满一个刻度间隔时，数字不会显示出来，能看到一点空白)
-
+    plt.gca().xaxis.set_major_locator(MultipleLocator(1))  # 把x轴的刻度间隔设置为1
     plt.grid(ls='--')  # 生成网格
-
     plt.savefig(f"{args.visualization_address}/{args.model}_{type}_result.png")
     # plt.show()
 
 
 # 创建logger
-def creat_logger():
+def creat_logger(args):
     logger = logging.getLogger(f"{args.model}_training")
     logger.setLevel(logging.INFO)
     # 创建一个handler，用于写入日志文件
@@ -127,19 +131,19 @@ def creat_logger():
     return logger
 
 
-def train():
+def train(args):
     txt_log_file = open(f'{args.log_address}/{args.model}_training_log.txt', 'w')
-    logger = creat_logger()
+    logger = creat_logger(args)
 
-    global net
+    prepare_folders(args)
+    dataset, device = prepare_data(args)
+    net, optimizer, loss = prepare_model(args, device)
+
     epochs = args.epochs  # 设置epoch
 
     # 可视化参数
     total_train_losses = []  # 每个epoch的训练损失值列表
-    accuracies = []  # 每个epoch的准确率列表
-    precisions = []  # 每个epoch的精确率列表
-    recalls = []  # 每个epoch的召回率列表
-    f1_scores = []  # 每个epoch的F1值列表
+    accuracies, precisions, recalls, f1_scores = [], [], [], []  # 每个epoch的准确率,精确率,召回率,F1值列表
 
     for epoch in range(epochs):
         start_epoch = time.time()  # epoch开始计时
@@ -161,7 +165,9 @@ def train():
         for batch, (imgs, targets) in enumerate(trainLoader):
             start_batch = time.time()  # batch开始计时
             batch_count += 1
+
             # 训练主体
+
             # alexnet, vgg, resnet
             pred = net(imgs)  # imgs大小(batch_size,3,224,224)
             targets = targets.long()  # cross_entropy损失函数要求目标targets是长整型（torch.long或torch.int64）（都使用.long()）
@@ -170,14 +176,16 @@ def train():
             optimizer.zero_grad()  # 优化器梯度归零
             Loss.backward()  # 反向传播计算梯度
             optimizer.step()  # 更新参数
+
             # # GoogLeNet
             # pred, aux2, aux1 = net(imgs)
+            # targets = targets.long()
             # main_loss = loss(pred, targets)
             # # 计算辅助输出的损失
             # aux2_loss = loss(aux2.view(aux2.size(0), -1), targets)
             # aux1_loss = loss(aux1.view(aux1.size(0), -1), targets)
             # Loss = main_loss + 0.3 * aux2_loss + 0.3 * aux1_loss
-            # total_loss += Loss
+            # total_train_loss += Loss
             # optimizer.zero_grad()
             # Loss.backward()
             # optimizer.step()
@@ -263,12 +271,13 @@ def train():
                    "precisions": precisions,
                    "recalls": recalls,
                    "f1_scores": f1_scores}
-    create_visualization(x_axis=list(range(epochs)), y_axis=y_train_axit, type='train')
-    create_visualization(x_axis=list(range(epochs)), y_axis=y_test_axit, type='test')
+    create_visualization(args=args, x_axis=list(range(epochs)), y_axis=y_train_axit, type='train')
+    create_visualization(args=args, x_axis=list(range(epochs)), y_axis=y_test_axit, type='test')
 
     print("训练结束")
     txt_log_file.close()
 
 
 if __name__ == '__main__':
-    train()
+    args = parse_arguments()
+    train(args)

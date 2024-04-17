@@ -13,7 +13,7 @@ kwargs = {"num_classes": 2}
 
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    net = torchvision.models.vgg13(**kwargs)
+    net = torchvision.models.alexnet(**kwargs)
     net.to(device=device)
 
     # print(net)
