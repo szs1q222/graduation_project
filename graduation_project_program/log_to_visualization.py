@@ -8,6 +8,10 @@ from matplotlib.ticker import MultipleLocator
 
 # 训练过程绘图出现错误，根据日志文件进行绘图
 def parse_args():
+    """
+    解析命令行参数
+    :return: args
+    """
     parser = argparse.ArgumentParser(description='LogToVisualization')
     parser.add_argument('--model', default="googlenet", help='model')
     parser.add_argument('--log_address', default="./log", help='log_address')
@@ -17,6 +21,11 @@ def parse_args():
 
 
 def read_log_file(log_file):
+    """
+    读取日志文件
+    :param log_file: 日志文件地址
+    :return: total_train_losses, accuracies, precisions, recalls, f1_scores
+    """
     total_train_losses = []
     accuracies = []
     precisions = []
@@ -39,6 +48,15 @@ def read_log_file(log_file):
 
 
 def create_visualization(x_axis, y_axis, visualization_address, model, chart_type):
+    """
+    绘制图表
+    :param x_axis: x轴数据
+    :param y_axis: y轴数据
+    :param visualization_address: 可视化结果保存地址
+    :param model: 模型名称
+    :param chart_type: 图表类型，train or test
+    :return:
+    """
     plt.figure(figsize=(12, 6))
     lines = []
     labels = list(y_axis.keys())

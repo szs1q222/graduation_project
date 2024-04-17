@@ -20,8 +20,11 @@ import argparse
 import time
 
 
-# 命令行执行传参
 def parse_arguments():
+    """
+    解析命令行参数
+    :return: 命令行参数
+    """
     parser = argparse.ArgumentParser(description='Training')
     parser.add_argument('--model', default="resnet50", help='model')  # 选择模型
     # (alexnet; vgg11/13/16/19(_bn); googlenet; resnet18/34/50; densenet121/161; convnext_tiny/small)
@@ -42,15 +45,23 @@ def parse_arguments():
     return parser.parse_args()
 
 
-# 如果存储文件夹不存在，则创建
 def prepare_folders(args):
+    """
+    创建存储文件夹
+    :param args: 命令行参数
+    :return:
+    """
     for folder in [args.weights_address, args.log_address, args.visualization_address]:
         if not os.path.exists(folder):
             os.makedirs(folder)
 
 
-# 读取数据集
 def prepare_data(args):
+    """
+    读取数据集
+    :param args: 命令行参数
+    :return: 数据集实例化, device
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     size = (224, 224)
     data_augment = DataAugment(size=size)  # 数据增强实例化
@@ -60,16 +71,17 @@ def prepare_data(args):
     return dataset, device
 
 
-# 模型实例化
 def prepare_model(args, device):
+    """
+    模型实例化
+    :param args: 命令行参数
+    :param device:
+    :return: 模型实例化, 优化器实例化, 损失函数实例化
+    """
     kwargs = {"num_classes": args.num_classes}  # 模型参数存储
     if args.model.lower() not in {'resnet18', 'resnet34', 'resnet50', 'densenet121', 'densenet201', 'densenet169',
                                   'densenet161'}:
         kwargs["dropout"] = args.dropout
-
-    # net = torchvision.models.vgg16()
-    # creat_model = f"net = torchvision.models.{args.model.lower()}(**{kwargs})"
-    # exec(creat_model)
 
     # 动态导入模型
     net = getattr(torchvision.models, args.model.lower())(**kwargs)
@@ -82,8 +94,12 @@ def prepare_model(args, device):
     return net, optimizer, loss
 
 
-# 创建图片数据迭代器
 def colle(batch):
+    """
+    创建图片数据迭代器
+    :param batch: 每个batch的数据
+    :return: 图片数据迭代器, 标签数据迭代器
+    """
     # batch内多个元组形成一个元组，*解压出多个元组，zip每个对应位置缝合（相同索引）
     imgs, targets = list(zip(*batch))
     # 图片合并标签不合并可以加速训练（此处都合并了）
@@ -96,8 +112,15 @@ def colle(batch):
 # 若实现了__len__和__getitem__，DataLoader会自动实现数据集的分批，shuffle打乱顺序，drop_last删除最后不完整的批次，collate_fn如何取样本
 # dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=colle)
 
-# 创建可视化
 def create_visualization(args, x_axis: list, y_axis: dict, type: Optional[str] = ['train', 'test']):
+    """
+    创建可视化
+    :param args: 命令行参数
+    :param x_axis: x轴数据
+    :param y_axis: y轴数据
+    :param type: 参数来源类型, train/test
+    :return:
+    """
     plt.figure(figsize=(12, 6))
     for name, values in y_axis.items():
         plt.plot(x_axis, values, label=name)
@@ -113,10 +136,15 @@ def create_visualization(args, x_axis: list, y_axis: dict, type: Optional[str] =
 
 # 创建logger
 def creat_logger(args):
+    """
+    创建logger(日志记录)
+    :param args: 命令行参数
+    :return: logger实例化
+    """
     logger = logging.getLogger(f"{args.model.lower()}_training")
     logger.setLevel(logging.INFO)
-    # 创建一个handler，用于写入日志文件
     log_file = f"{args.log_address}/{args.model.lower()}_training.log"
+    # 创建一个handler，用于写入日志文件
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.INFO)
     # 再创建一个handler，用于输出到控制台
@@ -132,7 +160,26 @@ def creat_logger(args):
     return logger
 
 
+def calculate_metrics(true_labels, preds):
+    """
+    计算准确率,精确率,召回率,F1值
+    :param true_labels: 真实标签
+    :param preds: 预测标签
+    :return: 准确率,精确率,召回率,F1值
+    """
+    accuracy = accuracy_score(true_labels, preds.argmax(dim=1))
+    precision = precision_score(true_labels, preds.argmax(dim=1), average='macro')
+    recall = recall_score(true_labels, preds.argmax(dim=1), average='macro')
+    f1 = f1_score(true_labels, preds.argmax(dim=1), average='macro')
+    return accuracy, precision, recall, f1
+
+
 def train(args):
+    """
+    模型训练
+    :param args: 命令行参数
+    :return:
+    """
     txt_log_file = open(f'{args.log_address}/{args.model.lower()}_training_log.txt', 'w')
     logger = creat_logger(args)
 
@@ -206,6 +253,7 @@ def train(args):
                         f"loss:{float(Loss):.4f}, "
                         f"batch_time:{batch_time:.4f}")
 
+        # 打印训练集总损失
         txt_log_file.write(f'Epoch:{epoch + 1}/{epochs}, total_loss:{float(total_train_loss):.4f}\n')
         txt_log_file.flush()
         logger.info(f'Epoch:{epoch + 1}/{epochs}, total_loss:{float(total_train_loss):.4f}')
@@ -213,6 +261,7 @@ def train(args):
         # 每个epoch保存一次参数
         torch.save(net.state_dict(), f"{args.weights_address}/{args.model.lower()}_epoch{epoch + 1}_params.pth")
 
+        # 开始测试
         txt_log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
         txt_log_file.flush()
         logger.info(f"Test_epoch:{epoch + 1}/{epochs}")
@@ -227,17 +276,18 @@ def train(args):
             target = targets.ravel().cpu().numpy()
             preds.append(pred)
             true_labels.append(target)
+
+        # 处理预测结果和真实标签
         tensor_preds = [torch.from_numpy(pred) for pred in preds]
         preds = torch.cat(tensor_preds, dim=0)
         tensor_true_labels = [torch.from_numpy(label) for label in true_labels]
         true_labels = torch.cat(tensor_true_labels, dim=0)
 
-        accuracy = accuracy_score(true_labels, preds.argmax(dim=1))
-        precision = precision_score(true_labels, preds.argmax(dim=1), average='macro')
-        recall = recall_score(true_labels, preds.argmax(dim=1), average='macro')
-        f1 = f1_score(true_labels, preds.argmax(dim=1), average='macro')
+        # 计算准确率,精确率,召回率,F1值
+        accuracy, precision, recall, f1 = calculate_metrics(true_labels, preds)
 
         test_time = time.time() - test_start_time
+        # 打印测试集准确率,精确率,召回率,F1值
         txt_log_file.write(f'Test Accuracy: {accuracy:.4f}, '
                            f'Test Precision: {precision:.4f}, '
                            f'Test Recall: {recall:.4f}, '
@@ -250,11 +300,11 @@ def train(args):
                     f'Test F1: {f1:.4f}, '
                     f'Test time: {test_time}')
 
-        # 打印参数
         total_epoch_time = time.time() - start_epoch  # 训练一个epoch的时间
         epoch_hour = int(total_epoch_time / 60 // 60)
         epoch_minute = int(total_epoch_time // 60 - epoch_hour * 60)
         epoch_second = int(total_epoch_time - epoch_hour * 60 * 60 - epoch_minute * 60)
+        # 打印训练一个epoch的时间
         txt_log_file.write(f"epoch:{epoch + 1}/{epochs}, "
                            f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}\n")
         txt_log_file.flush()

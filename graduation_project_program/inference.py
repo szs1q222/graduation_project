@@ -6,6 +6,10 @@ from PIL import Image
 
 
 def get_args():
+    """
+    获取命令行参数
+    :return: args
+    """
     parser = argparse.ArgumentParser(description='Inference')
     parser.add_argument('--model', default="vgg16", help='model')  # 选择模型
     parser.add_argument('--num_classes', default=2, type=int, help='num_classes')  # 目标分类类别数
@@ -15,8 +19,12 @@ def get_args():
     return parser.parse_args()
 
 
-# 进行推理
 def run(args):
+    """
+    进行推理
+    :param args: 命令行参数
+    :return: 预测概率, 预测结果
+    """
     try:
         # 加载模型
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

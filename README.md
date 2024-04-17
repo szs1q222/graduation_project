@@ -54,16 +54,39 @@ graduation_project:.
     │  └─myloss.py	
     ├─weights 					// 模型参数文件夹 Model parameter folder
     ├─train.py 					// 训练主文件 Training master file
-	├─test.py 					// 测试主文件 Test master file
+	├─inference.py 				// 推理主文件 Inference master file
 	├─reference.py				// 个人相关参考模板 Personal reference template
 	└─model_test.py				// 个人学习、调试文件 Personal learning, debugging files
 ```
 
 ### 1.5 使用方式
 
+#### 1.5.1 模型训练
+
+pycharm打开graduation_project_program文件夹，运行train.py训练模型。  
+或者在命令行中运行train.py训练模型。
+
+#### 1.5.2 模型测试
+
+pycharm打开graduation_project_program文件夹，运行inference.py测试模型。  
+或者在命令行中运行inference.py测试模型。
+
+## 2. 参考资料 References
+
+[1]苏思铭,王浩宇,徐国爱.基于深度学习的网络广告视觉欺诈检测方法[J].  2021.  
+[2]郑远攀,李广阳,李晔.深度学习在图像识别中的应用研究综述[J].计算机工程与应用, 2019, 55(12):17.DOI:10.3778/j.issn.1002-8331.1903-0031.  
+[3]宁静涛,苏达新.深度学习在图像识别中的应用与挑战探析[J].电脑知识与技术,2023,19(28):24-26.DOI:10.14004/j.cnki.ckt.2023.1503.  
+[4]Lecun Y , Bottou L .Gradient-based learning applied to document recognition[J].Proceedings of the IEEE, 1998, 86(11):2278-2324.DOI:10.1109/5.726791.  
+[5]Krizhevsky A , Sutskever I , Hinton G .ImageNet Classification with Deep Convolutional Neural Networks[J].Advances in neural information processing systems, 2012, 25(2).DOI:10.1145/3065386.  
+[6]Zeiler D M ,Fergus R .Visualizing and Understanding Convolutional Networks.[J].CoRR,2013,abs/1311.2901  
+[7]Simonyan K ,Zisserman A .Very Deep Convolutional Networks for Large-Scale Image Recognition.[J].CoRR,2014,abs/1409.1556  
+[8]Szegedy C ,0015 L W ,Jia Y , et al.Going Deeper with Convolutions.[J].CoRR,2014,abs/1409.4842  
+[9]He K ,Zhang X ,Ren S , et al.Deep Residual Learning for Image Recognition.[J].CoRR,2015,abs/1512.03385  
+[10]Huang G , Liu Z , Laurens V D M ,et al.Densely Connected Convolutional Networks[J].IEEE Computer Society, 2016.DOI:10.1109/CVPR.2017.243.  
+[11]Hu J , Shen L , Sun G .Squeeze-and-Excitation Networks[C]//2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR).IEEE, 2018.DOI:10.1109/CVPR.2018.00745.  
 
 
 ## 鸣谢
 
-感谢学院和指导教师对本项目的支持和指导，感谢参与本项目的团队成员的辛勤付出。
+感谢学院、指导教师和同学对本项目的支持和指导。
 
