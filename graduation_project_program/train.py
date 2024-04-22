@@ -38,6 +38,8 @@ def parse_arguments():
     parser.add_argument('--train_rate', default=0.8, type=float, help='train_rate')  # 训练集切分比例
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate of model')  # 学习率
     parser.add_argument('--dropout', default=0.5, type=float, help='dropout of model')  # dropout
+    parser.add_argument('--optimizer', default="SGD", help='optimizer')  # 优化器选择
+    parser.add_argument('--loss_function', default="CrossEntropyLoss", help='loss function')  # 损失函数选择
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')  # 动量
     parser.add_argument('--batch_size', default=32, type=int, help='batch_size')
     parser.add_argument('--epochs', default=20, type=int, help='epochs')
@@ -88,9 +90,10 @@ def prepare_model(args, device):
     net = net.to(device=device)
 
     # 迭代器和损失函数优化器实例化
-    optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = getattr(torch.optim, args.optimizer)(net.parameters(), lr=args.lr, momentum=args.momentum,
+                                                     weight_decay=args.weight_decay)
     # loss = MyLoss()  # 等价于loss = nn.CrossEntropyLoss()
-    loss = nn.CrossEntropyLoss()
+    loss = getattr(nn, args.loss_function)()
     return net, optimizer, loss
 
 
@@ -180,10 +183,11 @@ def train(args):
     :param args: 命令行参数
     :return:
     """
+    prepare_folders(args)
+
     txt_log_file = open(f'{args.log_address}/{args.model.lower()}_training_log.txt', 'w')
     logger = creat_logger(args)
 
-    prepare_folders(args)
     dataset, device = prepare_data(args)
     net, optimizer, loss = prepare_model(args, device)
 
@@ -261,6 +265,12 @@ def train(args):
         # 每个epoch保存一次参数
         torch.save(net.state_dict(), f"{args.weights_address}/{args.model.lower()}_epoch{epoch + 1}_params.pth")
 
+        # 删除上一个epoch的模型参数文件
+        if epoch > 0:
+            previous_epoch_params = f"{args.weights_address}/{args.model.lower()}_epoch{epoch}_params.pth"
+            if os.path.exists(previous_epoch_params):
+                os.remove(previous_epoch_params)
+
         # 开始测试
         txt_log_file.write(f"Test_epoch:{epoch + 1}/{epochs}\n")
         txt_log_file.flush()
@@ -311,6 +321,7 @@ def train(args):
         logger.info(f"epoch:{epoch + 1}/{epochs}, "
                     f"total_time:{epoch_hour}:{epoch_minute}:{epoch_second}")
 
+        total_train_loss = total_train_loss.cpu().detach().numpy()
         total_train_losses.append(total_train_loss)
         accuracies.append(accuracy)
         precisions.append(precision)
@@ -329,6 +340,10 @@ def train(args):
     txt_log_file.close()
 
 
-if __name__ == '__main__':
+def main():
     args = parse_arguments()
     train(args)
+
+
+if __name__ == '__main__':
+    main()

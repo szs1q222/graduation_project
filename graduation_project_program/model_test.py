@@ -13,19 +13,23 @@ kwargs = {"num_classes": 2}
 
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    net = torchvision.models.alexnet(**kwargs)
+    # net = torchvision.models.alexnet(**kwargs)
+    # net = torchvision.models.googlenet(**kwargs)
+    # net = torchvision.models.convnext_tiny()
+    net = torchvision.models.vit_b_16(**kwargs)
     net.to(device=device)
 
-    # print(net)
-    from torchsummary import summary
-
-    # from torchinfo import summary
+    net.eval()
+    x = torch.rand(2, 3, 224, 224).to(device)
+    outputs = net(x)
+    print(outputs)  # 这将打印出返回的所有内容
+    print(len(outputs))  # 这将打印出返回值的数量
+    print(net)
 
     # 统计需要参数量
-    summary(net, (3, 224, 224))
-    # out = net(x)
-    # print(out.size())
-    # print(out)
+    # from torchsummary import summary
+    #
+    # summary(net, (3, 224, 224))
 
     str = ["alexnet",
            "vgg11", "vgg13", "vgg16", "vgg19", "vgg11_bn", "vgg13_bn", "vgg16_bn", "vgg19_bn",
@@ -33,16 +37,6 @@ if __name__ == "__main__":
            "resnet18", "resnet34",
            "densenet121"
            "convnext_tiny", "convnext_small"]
-    # net = torchvision.models.convnext_tiny()
-
-    # net = torchvision.models.googlenet(**kwargs)
-    # net.to(device=device)
-    # # net.eval()
-    # outputs = net(x)
-    # print(outputs)  # 这将打印出返回的所有内容
-    # print(len(outputs))  # 这将打印出返回值的数量
-
-    # resout = summary(net, (3, 224, 224))
 
 # import torch
 # import torchvision

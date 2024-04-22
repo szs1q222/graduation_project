@@ -55,7 +55,6 @@ graduation_project:.
     ├─weights 					// 模型参数文件夹 Model parameter folder
     ├─train.py 					// 训练主文件 Training master file
 	├─inference.py 				// 推理主文件 Inference master file
-	├─reference.py				// 个人相关参考模板 Personal reference template
 	└─model_test.py				// 个人学习、调试文件 Personal learning, debugging files
 ```
 
