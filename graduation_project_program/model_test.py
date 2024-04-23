@@ -5,25 +5,50 @@ import torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 kwargs = {"num_classes": 2}
+
+
 # , "init_weights": True, "dropout": 0.5}
 # vgg16 = torchvision.models.vgg16  # torchvision提供网络
 # vgg16.classifier[6] = nn.Linear(in_features=4096, out_features=2)
 # vgg16.to(device=device)
 # print(vgg16)
 
+def replace_activation(model, old_activation_type, new_activation_type, new_activation_params):
+    for name, module in model.named_children():
+        if isinstance(module, old_activation_type):
+            # 直接替换为新的激活函数
+            setattr(model, name, new_activation_type(**new_activation_params))
+        elif isinstance(module, nn.Sequential):
+            # 递归地处理序列模块
+            for child_name, child_module in module.named_children():
+                if isinstance(child_module, old_activation_type):
+                    setattr(module, child_name, new_activation_type(**new_activation_params))
+        elif hasattr(module, 'children') and len(list(module.children())) > 0:
+            # 递归地处理其他模块
+            replace_activation(module, old_activation_type, new_activation_type, new_activation_params)
+    return model
+
+
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # net = torchvision.models.alexnet(**kwargs)
+    net = torchvision.models.alexnet(**kwargs)
     # net = torchvision.models.googlenet(**kwargs)
     # net = torchvision.models.convnext_tiny()
-    net = torchvision.models.vit_b_16(**kwargs)
+    # net = torchvision.models.vit_b_16(**kwargs)
     net.to(device=device)
 
-    net.eval()
-    x = torch.rand(2, 3, 224, 224).to(device)
-    outputs = net(x)
-    print(outputs)  # 这将打印出返回的所有内容
-    print(len(outputs))  # 这将打印出返回值的数量
+    nn.CrossEntropyLoss()
+    # net.eval()
+    # x = torch.rand(2, 3, 224, 224).to(device)
+    # outputs = net(x)
+    # print(outputs)  # 这将打印出返回的所有内容
+    # print(len(outputs))  # 这将打印出返回值的数量
+    print(net)
+
+    new_activation_params = {'negative_slope': 0.1}
+    net = replace_activation(net, nn.ReLU, nn.LeakyReLU, new_activation_params)
+    torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
     print(net)
 
     # 统计需要参数量
