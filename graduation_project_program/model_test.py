@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # net = torchvision.models.vit_b_16(**kwargs)
     net.to(device=device)
 
-    nn.CrossEntropyLoss()
+    # nn.CrossEntropyLoss()
     # net.eval()
     # x = torch.rand(2, 3, 224, 224).to(device)
     # outputs = net(x)
@@ -45,11 +45,11 @@ if __name__ == "__main__":
     # print(len(outputs))  # 这将打印出返回值的数量
     print(net)
 
-    new_activation_params = {'negative_slope': 0.1}
-    net = replace_activation(net, nn.ReLU, nn.LeakyReLU, new_activation_params)
-    torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-    print(net)
+    # new_activation_params = {'negative_slope': 0.1}
+    # net = replace_activation(net, nn.ReLU, nn.LeakyReLU, new_activation_params)
+    # torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    #
+    # print(net)
 
     # 统计需要参数量
     # from torchsummary import summary
