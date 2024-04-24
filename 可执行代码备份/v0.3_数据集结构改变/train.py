@@ -171,7 +171,8 @@ def prepare_model(args, device):
     :return: 模型实例化, 优化器实例化, 损失函数实例化
     """
     kwargs = {"num_classes": args.num_classes}  # 模型参数存储
-    if args.dropout:
+    if args.model.lower() not in {'resnet18', 'resnet34', 'resnet50', 'densenet121', 'densenet201', 'densenet169',
+                                  'densenet161'}:
         kwargs["dropout"] = args.dropout
 
     # 动态导入模型
