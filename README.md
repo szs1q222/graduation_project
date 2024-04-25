@@ -28,10 +28,10 @@ Research on red packet recognition technology of mobile application based on dee
 
 ### 1.3 关键词 Keyword
 
-**深度学习：**利用深度神经网络结构自动学习和提取图像中的抽象特征，实现红包图像的识别和检测。
+**深度学习：**利用深度神经网络结构自动学习和提取图像中的抽象特征，实现红包图像的识别和检测。  
 **图像分类：**采用深度学习图像识别中的经典模型，处理和分析图像数据，实现红包图像的分类处理。
 
-**Deep learning:** The use of deep neural network structure to automatically learn and extract abstract features in the image to realize the recognition and detection of the red envelope image.
+**Deep learning:** The use of deep neural network structure to automatically learn and extract abstract features in the image to realize the recognition and detection of the red envelope image.  
 **Image classification:** The classical model of deep learning image recognition is used to process and analyze image data to realize the classification and processing of red envelope images.
 
 ### 1.4 项目结构 Project Structure
@@ -40,35 +40,55 @@ Research on red packet recognition technology of mobile application based on dee
 graduation_project:.
 ├─.gitignore
 ├─README.md
-└─graduation_project_program 	// 主程序 Main program
-    ├─Augmentation 				// 自定义图像增强 Custom image enhancement
+└─graduation_project_program // 主程序 Main program
+    ├─Augmentation 			// 自定义图像增强 Custom image enhancement
     │  └─data_augment.py
-    ├─dataset
+    ├─dataset				// YOLO格式数据集 YOLO format data set
     │  ├─test
-    │  │  └─img					// .jpg
-    │  └─train 					// YOLO格式数据集 YOLO format data set
-    │      ├─img				// .jpg
-    │      └─label				// .txt
-    ├─log 						// 日志文件夹 Log folder
-    ├─utils 					// 自定义工具函数 Custom utility functions
+    │  │   ├─img			// .jpg
+    │  │   └─label			// .txt
+    │  ├─train 					
+    │  │   ├─img			// .jpg
+    │  │   └─label			// .txt
+    │  ├─self_test
+    │  ├─segmentation_dataset.py	// 切分训练集中数据到训练集中
+    │  └─merge_dataset.py	// 合并测试集中数据到训练集中
+    ├─log 					// 日志文件夹 Log folder
+    ├─utils 				// 自定义工具函数 Custom utility functions
     │  └─myloss.py	
-    ├─weights 					// 模型参数文件夹 Model parameter folder
-    ├─train.py 					// 训练主文件 Training master file
-	├─inference.py 				// 推理主文件 Inference master file
-	└─model_test.py				// 个人学习、调试文件 Personal learning, debugging files
+    ├─weights 				// 模型参数文件夹 Model parameter folder
+    ├─visualization			// 训练过程、结果可视化文件夹
+    ├─train_result 			// 训练结束后结果整合
+    ├─train.py 				// 训练主文件 Training master file
+    ├─run_train.sh			// 训练执行文件
+	├─inference.py 			// 个人推理主文件 Inference master file
+	└─model_test.py			// 个人模型相关学习、调试文件 
 ```
 
 ### 1.5 使用方式
 
 #### 1.5.1 模型训练
 
-pycharm打开graduation_project_program文件夹，运行train.py训练模型。  
-或者在命令行中运行train.py训练模型。
+（1）pycharm打开graduation_project_program文件夹，运行train.py训练模型。  
+（2）在命令行中运行train.py训练模型。如：`python train.py --model=vgg16`  
+（3）修改run_train.sh文件，并执行。
 
 #### 1.5.2 模型测试
 
-pycharm打开graduation_project_program文件夹，运行inference.py测试模型。  
-或者在命令行中运行inference.py测试模型。
+将测试图片放入`\graduation_project\dataset\self_test`文件中，然后：
+（1）pycharm打开graduation_project_program文件夹，运行inference.py测试模型。  
+（2）在命令行中运行inference.py测试模型。
+
+#### 1.5.3 过程和结果分析
+
+训练完成：  
+`\graduation_project\train_result`文件中，模型对应存储文件夹命名规则为：`{model}_{num_classes}_{train_rate}_{lr}_{dropout}_{optimizer}_{loss_function}_{batch_size}"`  
+其中存储了`.log`和`.txt`的日志文件，训练过程的损失、测试准确率等结果的可视化`.png`文件，最后epoch的模型参数文件`.pth`
+
+训练中断：  
+日志文件在`\graduation_project\log`文件中  
+模型参数文件在`\graduation_project\weights`文件中  
+可视化文件在`\graduation_project\visualization`文件中
 
 ## 2. 参考资料 References
 
@@ -83,7 +103,6 @@ pycharm打开graduation_project_program文件夹，运行inference.py测试模�
 [9]He K ,Zhang X ,Ren S , et al.Deep Residual Learning for Image Recognition.[J].CoRR,2015,abs/1512.03385  
 [10]Huang G , Liu Z , Laurens V D M ,et al.Densely Connected Convolutional Networks[J].IEEE Computer Society, 2016.DOI:10.1109/CVPR.2017.243.  
 [11]Hu J , Shen L , Sun G .Squeeze-and-Excitation Networks[C]//2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR).IEEE, 2018.DOI:10.1109/CVPR.2018.00745.  
-
 
 ## 鸣谢
 
