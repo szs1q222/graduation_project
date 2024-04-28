@@ -61,8 +61,8 @@ graduation_project:.
     ├─train_result 			// 训练结束后结果整合
     ├─train.py 				// 训练主文件 Training master file
     ├─run_train.sh			// 训练执行文件
-	├─inference.py 			// 个人推理主文件 Inference master file
-	└─model_test.py			// 个人模型相关学习、调试文件 
+    ├─inference.py 			// 个人推理主文件 Inference master file
+    └─model_test.py			// 个人模型相关学习、调试文件 
 ```
 
 ### 1.5 使用方式

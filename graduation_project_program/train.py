@@ -50,6 +50,10 @@ def parse_arguments():
     parser.add_argument('--loss_function_params', default=None, help='loss function params (dict)')  # 损失函数参数(dict)
     # 训练过程相关参数设置
     parser.add_argument('--input_size', default=224, type=int, help='input picture size')  # 统一输入图片大小
+    parser.add_argument('--data_augment', default=None,
+                        help='data augmentation')  # 选择数据增强方式（None 或'autoaugment' 或 'randaugment'）
+    parser.add_argument('--data_augment_params', default=None,
+                        help='data augmentation params (dict)')  # 数据增强参数(dict) autoaugment模式下需要policy
     parser.add_argument('--num_classes', default=2, type=int, help='classification number')  # 目标分类类别数
     parser.add_argument('--train_rate', default=0.8, type=float, help='training set segmentation ratio')  # 训练集切分比例
     parser.add_argument('--dropout', default=None, type=float, help='dropout of model')  # dropout
@@ -77,9 +81,14 @@ def prepare_data(args):
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     size = (args.input_size, args.input_size)  # 统一输入图片大小(224, 224)
-    data_augment = DataAugment(size=size)  # 数据增强实例化
-    dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=data_augment,
-                       device=device)  # 读取训练数据集实例化
+
+    # 数据增强实例化
+    data_augment = DataAugment(size=size, type=args.data_augment)
+    if args.data_augment_params is not None:
+        data_augment = DataAugment(size=size, type=args.data_augment, **args.data_augment_params)
+
+    # 读取训练数据集实例化
+    dataset = ReadYOLO(dateset_address=args.dateset_address, phase='train', trans=data_augment, device=device)
     # 读取测试数据集实例化
     out_test_dataset = ReadYOLO(dateset_address=args.dateset_address, phase='test', trans=data_augment, device=device)
     # picture_num = len(dataset)  # 获取图片总数
