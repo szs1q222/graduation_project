@@ -1,7 +1,6 @@
 import os
 import shutil
 from math import ceil
-from typing import Optional
 
 import torch
 from torch import nn
@@ -15,6 +14,7 @@ from matplotlib.ticker import MultipleLocator
 from utils.myloss import MyLoss
 from dataset.read_yolo_dataset import ReadYOLO
 from Augmentation.data_augment import DataAugment
+from dataset import merge_dataset, segmentation_dataset
 
 import logging
 import argparse
@@ -28,7 +28,17 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description='Training')
     parser.add_argument('--model', default="resnet18", help='model')  # 选择模型
-    parser.add_argument('--train_use_rate', default=1.0, type=float, help='data set ratio used for training')  # 数据集使用比例
+    # parser.add_argument('--train_use_rate', default=0.9, type=float,
+    #                     help='data set ratio used for training')  # 数据集使用比例(1.0或者0.9)[未使用，仅做理解]
+
+    # 操作选择
+    # parser.add_argument('--visualize', default=True, help='use visualize')  # 是否使用可视化
+    # parser.add_argument('--log', default=True, help='use log')  # 是否使用日志
+    parser.add_argument('--log_print', default=True, help='Command-line print log')  # 打印日志
+    # parser.add_argument('--log_save', default=True, help='save log')  # 保存日志
+    # parser.add_argument('--model_save', default=True, help='save model')  # 保存模型
+    parser.add_argument('--integrate_result', default=True, help='integrate result')  # 整合结果
+
     # 所有地址相关变量放在一个文件中，方便上云管理
     parser.add_argument('--dateset_address', default="./dataset", help='dateset address')  # 数据集地址
     parser.add_argument('--weights_address', default="./weights", help='weights address')  # 模型参数存储地址
@@ -77,7 +87,7 @@ def prepare_data(args):
     """
     读取数据集
     :param args: 命令行参数
-    :return: 数据集实例化, device
+    :return: 数据集实例化, device, 测试数据集实例化
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     size = (args.input_size, args.input_size)  # 统一输入图片大小(224, 224)
@@ -123,20 +133,37 @@ def replace_activation(model, old_activation_type, new_activation_type, new_acti
     return model
 
 
-def modify_model_to_accept_any_size(model, input_size):
-    # 获取模型的第一层
-    first_layer = list(model.children())[0]
+def modify_model_to_accept_any_size(model, input_size: int):
+    """
+    这个函数尚未完成实现和使用。
 
-    # 如果第一层是卷积层，则修改其接收域大小
+    当前状态：未实现
+
+    可能的用途：
+    - 修改模型接收域大小
+
+    注意事项：
+    - 此函数仅做概念思考使用，尚未被代码使用
+    - 在实现和使用前，其行为和功能可能会发生变化
+    - 请勿使用此函数
+
+    :param model: 模型实例
+    :param input_size: 输入图片大小
+    :return: 模型实例
+    """
+    # 查找模型的第一层
+    first_layer = next(iter(model.children()))
+
+    # 如果第一层是一个卷积层，则修改其接收域大小
     if isinstance(first_layer, nn.Conv2d):
         # 计算新的卷积核大小和步幅
-        new_kernel_size = first_layer.kernel_size[0] * (input_size[0] // 224)
-        new_stride = first_layer.stride[0] * (input_size[0] // 224)
+        new_kernel_size = first_layer.kernel_size[0] * (input_size // 224)
+        new_stride = first_layer.stride[0] * (input_size // 224)
 
         # 创建一个新的卷积层
         new_first_layer = nn.Conv2d(
-            first_layer.in_channels,
-            first_layer.out_channels,
+            in_channels=first_layer.in_channels,
+            out_channels=first_layer.out_channels,
             kernel_size=new_kernel_size,
             stride=new_stride,
             padding=first_layer.padding,
@@ -145,29 +172,28 @@ def modify_model_to_accept_any_size(model, input_size):
 
         # 替换原来的第一层
         model._modules['0'] = new_first_layer
+
+    # 如果第一层是一个序列模块，则进一步遍历其子模块
     elif isinstance(first_layer, nn.Sequential):
-        # 如果当前模块是 nn.Sequential，则进一步遍历其子模块
-        for name, module in model.named_children():
-            if isinstance(module, nn.Sequential):
-                for child_name, child_module in module.named_children():
-                    # 检查子模块是否是卷积层
-                    if isinstance(child_module, nn.Conv2d):
-                        # 计算新的卷积核大小和步幅
-                        new_kernel_size = child_module.kernel_size[0] * (input_size[0] // 224)
-                        new_stride = child_module.stride[0] * (input_size[0] // 224)
+        for child_name, child_module in first_layer.named_children():
+            # 检查子模块是否是卷积层
+            if isinstance(child_module, nn.Conv2d):
+                # 计算新的卷积核大小和步幅
+                new_kernel_size = child_module.kernel_size[0] * (input_size // 224)
+                new_stride = child_module.stride[0] * (input_size // 224)
 
-                        # 创建一个新的卷积层
-                        new_conv_layer = nn.Conv2d(
-                            child_module.in_channels,
-                            child_module.out_channels,
-                            kernel_size=new_kernel_size,
-                            stride=new_stride,
-                            padding=child_module.padding,
-                            bias=child_module.bias
-                        )
+                # 创建一个新的卷积层
+                new_conv_layer = nn.Conv2d(
+                    in_channels=child_module.in_channels,
+                    out_channels=child_module.out_channels,
+                    kernel_size=new_kernel_size,
+                    stride=new_stride,
+                    padding=child_module.padding,
+                    bias=child_module.bias
+                )
 
-                        # 替换原来的卷积层
-                        setattr(module, child_name, new_conv_layer)
+                # 替换原来的卷积层
+                setattr(first_layer, child_name, new_conv_layer)
 
     return model
 
@@ -230,13 +256,13 @@ def collate_fn(batch):
 # 若实现了__len__和__getitem__，DataLoader会自动实现数据集的分批，shuffle打乱顺序，drop_last删除最后不完整的批次，collate_fn如何取样本
 # dataload = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False, collate_fn=collate_fn)
 
-def create_visualization(args, x_axis: list, y_axis: dict, type: Optional[str] = ['train', 'test', 'out_test']):
+def create_visualization(args, x_axis: list, y_axis: dict, type: str):
     """
     创建可视化
     :param args: 命令行参数
     :param x_axis: x轴数据
     :param y_axis: y轴数据
-    :param type: 参数来源类型, train/test/out_test
+    :param type: 参数来源类型, Optional[str] = ['train', 'test', 'out_test']
     :return:
     """
     plt.figure(figsize=(12, 6))
@@ -265,16 +291,19 @@ def create_logger(args):
     # 创建一个handler，用于写入日志文件
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.INFO)
-    # 再创建一个handler，用于输出到控制台
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
     # 定义handler的输出格式
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
     # 给logger添加handler
     logger.addHandler(fh)
-    logger.addHandler(ch)
+
+    if args.log_print:
+        # 再创建一个handler，用于输出到控制台
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
     return logger
 
 
@@ -292,7 +321,7 @@ def calculate_metrics(true_labels, preds):
     return accuracy, precision, recall, f1
 
 
-def train_one_epoch(args, dataset, epoch, epochs, logger, loss, net, optimizer, trainLoader, txt_log_file):
+def train_one_epoch(args, dataset, epoch: int, epochs: int, logger, loss, net, optimizer, trainLoader, txt_log_file):
     """
     训练一个epoch
     :param args: 命令行参数
@@ -427,10 +456,12 @@ def train(args):
     # 可视化参数
     total_train_losses = []  # 每个epoch的训练损失值列表
     accuracies, precisions, recalls, f1_scores = [], [], [], []  # 每个epoch的交叉验证时的准确率,精确率,召回率,F1值列表
-    out_accuracies, out_precisions, out_recalls, out_f1_scores = [], [], [], []  # 每个epoch的非train的外部测试集验证时的准确率,精确率,召回率,F1值列表
+    # 每个epoch的非train的外部测试集验证时的准确率,精确率,召回率,F1值列表
+    out_accuracies, out_precisions, out_recalls, out_f1_scores = [], [], [], []
 
     out_test_loader = DataLoader(out_test_dataset, batch_size=args.batch_size, shuffle=True, drop_last=False,
                                  collate_fn=collate_fn)
+
     for epoch in range(epochs):
         start_epoch = time.time()  # epoch开始计时
 
@@ -508,17 +539,18 @@ def train(args):
     txt_log_file.close()
 
     # 整合存储所有文件
-    result_address = f"{args.result_address}/" \
-                     f"{args.model.lower()}_{args.num_classes}_{args.train_rate}_" \
-                     f"{args.lr}_{args.dropout}_{args.optimizer}_{args.loss_function}_{args.batch_size}"
-    if not os.path.exists(result_address):
-        os.makedirs(result_address)
-    shutil.move(f"{args.log_address}/{args.model.lower()}_training.log", result_address)
-    shutil.move(f"{args.log_address}/{args.model.lower()}_training_log.txt", result_address)
-    shutil.move(f"{args.visualization_address}/{args.model.lower()}_train_result.png", result_address)
-    shutil.move(f"{args.visualization_address}/{args.model.lower()}_test_result.png", result_address)
-    shutil.move(f"{args.visualization_address}/{args.model.lower()}_out_test_result.png", result_address)
-    shutil.move(f"{args.weights_address}/{args.model.lower()}_epoch{epochs}_params.pth", result_address)
+    if args.integrate_result:
+        result_address = f"{args.result_address}/" \
+                         f"{args.model.lower()}_{args.num_classes}_{args.train_rate}_" \
+                         f"{args.lr}_{args.dropout}_{args.optimizer}_{args.loss_function}_{args.batch_size}"
+        if not os.path.exists(result_address):
+            os.makedirs(result_address)
+        shutil.move(f"{args.log_address}/{args.model.lower()}_training.log", result_address)
+        shutil.move(f"{args.log_address}/{args.model.lower()}_training_log.txt", result_address)
+        shutil.move(f"{args.visualization_address}/{args.model.lower()}_train_result.png", result_address)
+        shutil.move(f"{args.visualization_address}/{args.model.lower()}_test_result.png", result_address)
+        shutil.move(f"{args.visualization_address}/{args.model.lower()}_out_test_result.png", result_address)
+        shutil.move(f"{args.weights_address}/{args.model.lower()}_epoch{epochs}_params.pth", result_address)
 
     print("训练结束")
 
