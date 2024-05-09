@@ -28,8 +28,8 @@ Research on red packet recognition technology of mobile application based on dee
 
 ### 1.3 关键词 Keyword
 
-**深度学习：**利用深度神经网络结构自动学习和提取图像中的抽象特征，实现红包图像的识别和检测。  
-**图像分类：**采用深度学习图像识别中的经典模型，处理和分析图像数据，实现红包图像的分类处理。
+**深度学习**：利用深度神经网络结构自动学习和提取图像中的抽象特征，实现红包图像的识别和检测。  
+**图像分类**：采用深度学习图像识别中的经典模型，处理和分析图像数据，实现红包图像的分类处理。
 
 **Deep learning:** The use of deep neural network structure to automatically learn and extract abstract features in the image to realize the recognition and detection of the red envelope image.  
 **Image classification:** The classical model of deep learning image recognition is used to process and analyze image data to realize the classification and processing of red envelope images.
@@ -51,27 +51,30 @@ graduation_project:.
     │  │   ├─img			// .jpg
     │  │   └─label			// .txt
     │  ├─self_test
-    │  ├─segmentation_dataset.py	// 切分训练集中数据到训练集中
-    │  └─merge_dataset.py	// 合并测试集中数据到训练集中
+    │  ├─segmentation_dataset.py	// 切分训练集中数据到训练集和外部测试集中
+    │  └─merge_dataset.py	// 合并外部测试集数据到训练集中
     ├─log 					// 日志文件夹 Log folder
     ├─utils 				// 自定义工具函数 Custom utility functions
     │  └─myloss.py	
     ├─weights 				// 模型参数文件夹 Model parameter folder
-    ├─visualization			// 训练过程、结果可视化文件夹
-    ├─train_result 			// 训练结束后结果整合
+    ├─visualization			// 可视化存储文件夹 Visual file folder
+    ├─train_result 			// 训练结束后结果整合文件夹 Results integration folder
     ├─train.py 				// 训练主文件 Training master file
-    ├─run_train.sh			// 训练执行文件
-    ├─inference.py 			// 个人推理主文件 Inference master file
-    └─model_test.py			// 个人模型相关学习、调试文件 
+    ├─train_alldata.py 		// 训练（不使用验证集）(without validation set)
+    ├─run_train.sh			// 批量训练执行文件
+    └─inference.py 			// 个人推理主文件 Inference master file
 ```
 
 ### 1.5 使用方式
 
 #### 1.5.1 模型训练
 
+（0）选择是否训练全部数据集（使用segmentation_dataset.py和merge_dataset.py进行数据切分和重组），然后据此选择使用train.py还是train_alldata.py。  
 （1）pycharm打开graduation_project_program文件夹，运行train.py训练模型。  
 （2）在命令行中运行train.py训练模型。如：`python train.py --model=vgg16`  
 （3）修改run_train.sh文件，并执行。
+
+批量执行也可修改run_train.sh中代码并执行。
 
 #### 1.5.2 模型测试
 
