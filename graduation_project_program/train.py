@@ -28,8 +28,8 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description='Training')
     parser.add_argument('--model', default="resnet18", help='model')  # 选择模型
-    # parser.add_argument('--train_use_rate', default=0.9, type=float,
-    #                     help='data set ratio used for training')  # 数据集使用比例(1.0或者0.9)[未使用，仅做理解]
+    # 数据集使用比例(1.0或者0.9)[未使用，仅做理解，通过使用dataset文件夹中的分割和合并函数实现，若选择训练全部数据集，选择train_alldata.py文件]
+    # parser.add_argument('--train_use_rate', default=0.9, type=float, help='data set ratio used for training')
 
     # 操作选择
     # parser.add_argument('--visualize', default=True, help='use visualize')  # 是否使用可视化
